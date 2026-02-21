@@ -1,28 +1,61 @@
+
 DROP TABLE IF EXISTS dbo.pending_deployments;
 DROP TABLE IF EXISTS dbo.deployments;
+DROP TABLE IF EXISTS dbo.run_history;
+DROP TABLE IF EXISTS dbo.run_history_details;
+GO
+
+
 create table dbo.pending_deployments
 (
 	ReleaseId int,
 	Asset_Name varchar(60),
 	Job_Name varchar(60),
+    [Enabled] int default 1,
 	[Order] int,
-    [Status] varchar(20) default 'Pending',
 	[StartTime] datetime default getutcdate(),
 	[EndTime] datetime default getutcdate()
 );
 create table dbo.deployments
 (
+    [Deploymentid] [int] IDENTITY(1,1) PRIMARY KEY NOT NULL,
 	ReleaseId int,
 	Asset_Name varchar(60),
 	Job_Name varchar(60),
 	BatchId int,
 	[Order] int,
-    [Status] varchar(20),
+    [Status] varchar(20) default 'initialized',
 	[StartTime] datetime default getutcdate(),
 	[EndTime] datetime default getutcdate()
 );
+create table dbo.run_history
+(
+     
+	Run int,
+    BatchId int,
+    AssetCount int,
+    StartTime datetime,
+    EndTime datetime,
+    UniqueTimeWindows int,
+ 	[RunTime] datetime default getutcdate()
+);
+create table dbo.run_history_details
+(
+     
+	Run int,
+    BatchId int,
+    Asset_Name varchar(60),
+    RowsPerAsset int,
+    StartTime datetime,
+    EndTime datetime,
+    UniqueTimeWindows int,
+ 	[RunTime] datetime default getutcdate()
+); 
+GO
 DECLARE @MaxBatchCount INT = 8;
 DECLARE @StartTime1 datetime = DATEADD(HOUR, DATEDIFF(HOUR, 0, GETUTCDATE()), 0);
+DECLARE @StartTimeNextH datetime = dateadd(hour, 1, @StartTime1);
+DECLARE @EndTimeNextH datetime = dateadd(hour, 6, @StartTimeNextH);
 DECLARE @EndTime1 datetime = dateadd(hour, 6, @StartTime1);
 DECLARE @StartTime2 datetime = dateadd(day, 1, @StartTime1);
 DECLARE @EndTime2 datetime = dateadd(hour, 6, @StartTime2);
@@ -194,87 +227,111 @@ insert into dbo.pending_deployments(ReleaseId, Asset_Name, Job_Name, [Order],[St
 (6, 'Asset51', 'PostJob', 3, @StartTime1,@EndTime2alt),
 (6, 'Asset52', 'PreJob', 1, @StartTime1,@EndTime2alt),
 (6, 'Asset52', 'MainJob', 2, @StartTime1,@EndTime2alt),
-(6, 'Asset52', 'PostJob', 3, @StartTime1,@EndTime2alt)
-;
+(6, 'Asset52', 'PostJob', 3, @StartTime1,@EndTime2alt),
+(7, 'Asset53', 'PreJob', 1, @StartTimeNextH,@EndTimeNextH),
+(7, 'Asset53', 'MainJob', 2, @StartTimeNextH,@EndTimeNextH),
+(7, 'Asset53', 'PostJob', 3,   @StartTimeNextH,@EndTimeNextH),
+(7, 'Asset54', 'PreJob', 1, @StartTimeNextH,@EndTimeNextH),
+(7, 'Asset54', 'MainJob', 2, @StartTimeNextH,@EndTimeNextH),
+(7, 'Asset54', 'PostJob', 3, @StartTimeNextH,@EndTimeNextH),
+(7, 'Asset55', 'PreJob', 1, @StartTimeNextH,@EndTimeNextH),
+(7, 'Asset55', 'MainJob', 2, @StartTimeNextH,@EndTimeNextH),
+(7, 'Asset55', 'PostJob', 3, @StartTimeNextH,@EndTimeNextH),
+(7, 'Asset56', 'PreJob', 1, @StartTimeNextH,@EndTimeNextH),
+(7, 'Asset56', 'MainJob', 2, @StartTimeNextH,@EndTimeNextH),
+(7, 'Asset56', 'PostJob', 3, @StartTimeNextH,@EndTimeNextH),
+(7, 'Asset57', 'PreJob', 1, @StartTimeNextH,@EndTimeNextH),
+(7, 'Asset57', 'MainJob', 2, @StartTimeNextH,@EndTimeNextH),
+(7, 'Asset57', 'PostJob', 3, @StartTimeNextH,@EndTimeNextH),
+(7, 'Asset58', 'PreJob', 1, @StartTimeNextH,@EndTimeNextH),
+(7, 'Asset58', 'MainJob', 2, @StartTimeNextH,@EndTimeNextH),
+(7, 'Asset58', 'PostJob', 3, @StartTimeNextH,@EndTimeNextH),
+(7, 'Asset59', 'PreJob', 1, @StartTimeNextH,@EndTimeNextH),
+(7, 'Asset59', 'MainJob', 2, @StartTimeNextH,@EndTimeNextH),
+(7, 'Asset59', 'PostJob', 3, @StartTimeNextH,@EndTimeNextH),
+(7, 'Asset60', 'PreJob', 1, @StartTimeNextH,@EndTimeNextH),
+(7, 'Asset60', 'MainJob', 2, @StartTimeNextH,@EndTimeNextH); -- no post job for Asset60 to test handling of missing jobs
 
+BEGIN TRY
+    BEGIN TRANSACTION;
 
--- Created by GitHub Copilot in SSMS - review carefully before executing
--- Created by GitHub Copilot in SSMS - review carefully before executing
+    ;WITH TimeWindowAssets AS (
+        SELECT DISTINCT
+            ReleaseId,
+            Asset_Name,
+            StartTime,
+            EndTime,
+            DENSE_RANK() OVER (ORDER BY StartTime, EndTime) AS TimeWindowRank
+        FROM dbo.pending_deployments 
+        WHERE [Enabled] = 1
+    ),
+    TimeWindowBatchCounts AS (
+        SELECT 
+            TimeWindowRank,
+            StartTime,
+            EndTime,
+            CEILING(COUNT(DISTINCT Asset_Name) * 1.0 / @MaxBatchCount) AS BatchCount
+        FROM TimeWindowAssets
+        GROUP BY TimeWindowRank, StartTime, EndTime
+    ),
+    CumulativeBatches AS (
+        SELECT 
+            TimeWindowRank,
+            StartTime,
+            EndTime,
+            BatchCount,
+            ISNULL(SUM(BatchCount) OVER (ORDER BY TimeWindowRank ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING), 0) AS BatchOffset
+        FROM TimeWindowBatchCounts
+    ),
+    AssetBatches AS (
+        SELECT DISTINCT
+            twa.ReleaseId,
+            twa.Asset_Name,
+            twa.StartTime,
+            twa.EndTime,
+            cb.BatchOffset + ((ROW_NUMBER() OVER (PARTITION BY twa.StartTime, twa.EndTime ORDER BY twa.Asset_Name) - 1) / @MaxBatchCount) + 1 AS BatchId
+        FROM TimeWindowAssets twa
+        INNER JOIN CumulativeBatches cb ON twa.TimeWindowRank = cb.TimeWindowRank
+    ),
+    SourceData AS (
+        SELECT 
+            pd.ReleaseId,
+            pd.Asset_Name,
+            pd.Job_Name,
+            ab.BatchId,
+            pd.[Order],
+            pd.StartTime,
+            pd.EndTime
+        FROM dbo.pending_deployments pd
+        INNER JOIN AssetBatches ab 
+            ON pd.ReleaseId = ab.ReleaseId 
+            AND pd.Asset_Name = ab.Asset_Name
+            AND pd.StartTime = ab.StartTime
+            AND pd.EndTime = ab.EndTime
+        WHERE pd.[Enabled] = 1
+    )
+    MERGE dbo.deployments AS target
+    USING SourceData AS source
+    ON (
+        target.ReleaseId = source.ReleaseId
+        AND target.Asset_Name = source.Asset_Name
+        AND target.Job_Name = source.Job_Name
+    )
+    WHEN MATCHED THEN
+        UPDATE SET
+            target.BatchId = source.BatchId,
+            target.[Order] = source.[Order],
+            target.StartTime = source.StartTime,
+            target.EndTime = source.EndTime
+    WHEN NOT MATCHED BY TARGET THEN
+        INSERT (ReleaseId, Asset_Name, Job_Name, BatchId, [Order], StartTime, EndTime)
+        VALUES (source.ReleaseId, source.Asset_Name, source.Job_Name, source.BatchId, source.[Order], source.StartTime, source.EndTime);
 
- -- Created by GitHub Copilot in SSMS - review carefully before executing
+    COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+    IF @@TRANCOUNT > 0
+        ROLLBACK TRANSACTION;
+    THROW;
+END CATCH;
 
-TRUNCATE TABLE dbo.deployments;
-
-
-;WITH TimeWindowAssets AS (
-    -- Get distinct assets per time window with ranking
-    SELECT DISTINCT
-        ReleaseId,
-        Asset_Name,
-        StartTime,
-        EndTime,
-        DENSE_RANK() OVER (ORDER BY StartTime, EndTime) AS TimeWindowRank
-    FROM dbo.pending_deployments where [Status] = 'Pending'
-),
-TimeWindowBatchCounts AS (
-    -- Calculate number of batches needed per time window
-    SELECT 
-        TimeWindowRank,
-        StartTime,
-        EndTime,
-        CEILING(COUNT(DISTINCT Asset_Name) * 1.0 / @MaxBatchCount) AS BatchCount
-    FROM TimeWindowAssets
-    GROUP BY TimeWindowRank, StartTime, EndTime
-),
-CumulativeBatches AS (
-    -- Calculate cumulative batch offset for each time window
-    SELECT 
-        TimeWindowRank,
-        StartTime,
-        EndTime,
-        BatchCount,
-        ISNULL(SUM(BatchCount) OVER (ORDER BY TimeWindowRank ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING), 0) AS BatchOffset
-    FROM TimeWindowBatchCounts
-),
-AssetBatches AS (
-    SELECT DISTINCT
-        twa.ReleaseId,
-        twa.Asset_Name,
-        twa.StartTime,
-        twa.EndTime,
-        -- Add cumulative offset to batch number within time window
-        cb.BatchOffset 
-        + ((ROW_NUMBER() OVER (PARTITION BY twa.StartTime, twa.EndTime ORDER BY twa.Asset_Name) - 1) / @MaxBatchCount) + 1 AS BatchId
-    FROM TimeWindowAssets twa
-    INNER JOIN CumulativeBatches cb ON twa.TimeWindowRank = cb.TimeWindowRank
-)
-INSERT INTO dbo.deployments (ReleaseId, Asset_Name, Job_Name, BatchId, [Order], StartTime, EndTime)
-SELECT 
-    pd.ReleaseId,
-    pd.Asset_Name,
-    pd.Job_Name,
-    ab.BatchId,
-    pd.[Order],
-    pd.StartTime,
-    pd.EndTime
-FROM dbo.pending_deployments pd
-INNER JOIN AssetBatches ab 
-    ON pd.ReleaseId = ab.ReleaseId 
-    AND pd.Asset_Name = ab.Asset_Name
-    AND pd.StartTime = ab.StartTime
-    AND pd.EndTime = ab.EndTime
-ORDER BY ab.BatchId, pd.Asset_Name, pd.[Order];
-
--- Validation query
-SELECT 
-    BatchId, 
-    COUNT(DISTINCT Asset_Name) AS AssetCount, 
-    MIN(StartTime) AS StartTime, 
-    MIN(EndTime) AS EndTime,
-    COUNT(DISTINCT CAST(StartTime AS VARCHAR) + '|' + CAST(EndTime AS VARCHAR)) AS UniqueTimeWindows
-FROM dbo.deployments
-GROUP BY BatchId
-ORDER BY BatchId;
-
-select * FROM dbo.deployments order by BatchId, StartTime, EndTime, Asset_Name, [Order];
-select * FROM dbo.pending_deployments where [Status] = 'Pending' order by StartTime, EndTime, Asset_Name, [Order];
