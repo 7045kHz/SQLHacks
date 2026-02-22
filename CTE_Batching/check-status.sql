@@ -1,5 +1,4 @@
 
-
 DECLARE @MaxBatchCount INT = 8;
 
 ;WITH TimeWindowAssets AS (
@@ -109,6 +108,19 @@ WHERE Status = 'initialized'
 GROUP BY BatchId, Asset_Name
 ORDER BY BatchId, Asset_Name;
 
+insert into dbo.deployments_history (Run,Deploymentid, ReleaseId, Asset_Name, Job_Name, BatchId, [Order], Status, StartTime, EndTime)
+select 
+    [Run] = @CurrentRun,
+  -- [Run] = 1,
+    Deploymentid,
+    ReleaseId, 
+    Asset_Name, 
+    Job_Name, 
+    BatchId, 
+    [Order], 
+    Status, 
+    StartTime, 
+    EndTime from dbo.deployments 
 
 select * from dbo.run_history;
 select * from dbo.run_history_details where Asset_Name='Asset60';
@@ -118,3 +130,19 @@ select * from dbo.deployments where StartTime >= DATEADD(HOUR, DATEDIFF(HOUR, 0,
   AND StartTime < DATEADD(HOUR, DATEDIFF(HOUR, 0, GETUTCDATE()) + 1, 0)
 
 select * from dbo.deployments
+select * from    dbo.deployments_history 
+select top 10 * from dbo.deployments where Status<>'Sent' and ReleaseId=4 and [Order] = 3
+select top 10 * from dbo.pending_deployments where  ReleaseId=4 and [Order] = 3
+
+-- Check against last run for differences
+select * from dbo.deployments d
+full outer join dbo.deployments_history pd
+    ON d.ReleaseId = pd.ReleaseId
+    AND d.Asset_Name = pd.Asset_Name
+    AND d.Job_Name = pd.Job_Name
+--    AND d.StartTime = pd.StartTime
+--    AND d.EndTime = pd.EndTime
+WHERE 
+    pd.Run=(@CurrentRun -1) 
+    -- pd.Run=3
+    and ( d.BatchId<>pd.BatchId OR d.[Order]<>pd.[Order] OR d.Status<>pd.Status OR d.StartTime<>pd.StartTime OR d.EndTime<>pd.EndTime)

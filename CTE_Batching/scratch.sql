@@ -1,5 +1,3 @@
-
-
 -- Update deployments to 'Sent' when StartTime is in current hour and status is 'initialized'
 -- pretent already sent for current hour
 UPDATE dbo.deployments
@@ -8,7 +6,16 @@ WHERE [Status] = 'initialized'
   AND StartTime >= DATEADD(HOUR, DATEDIFF(HOUR, 0, GETUTCDATE()), 0)
   AND StartTime < DATEADD(HOUR, DATEDIFF(HOUR, 0, GETUTCDATE()) + 1, 0);
 
- 
+ update dbo.pending_deployments set Enabled = 0 where ReleaseId=4 and [Order] = 3 and Asset_Name in ('Asset27',
+'Asset28',
+'Asset29',
+'Asset30',
+'Asset31',
+'Asset32',
+'Asset33',
+'Asset34',
+'Asset35',
+'Asset36')
  update dbo.pending_deployments set Enabled = 0 where ReleaseId=7 and [Order] = 1 
 
 -- Update deployments to 'Disabled' when corresponding pending deployment is not enabled and status is 'initialized'

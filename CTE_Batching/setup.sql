@@ -1,6 +1,6 @@
-
 DROP TABLE IF EXISTS dbo.pending_deployments;
 DROP TABLE IF EXISTS dbo.deployments;
+DROP TABLE IF EXISTS dbo.deployments_history;
 DROP TABLE IF EXISTS dbo.run_history;
 DROP TABLE IF EXISTS dbo.run_history_details;
 GO
@@ -27,6 +27,20 @@ create table dbo.deployments
     [Status] varchar(20) default 'initialized',
 	[StartTime] datetime default getutcdate(),
 	[EndTime] datetime default getutcdate()
+);
+create table dbo.deployments_history
+(
+    Run int,
+    [Deploymentid] [int] ,
+	ReleaseId int,
+	Asset_Name varchar(60),
+	Job_Name varchar(60),
+	BatchId int,
+	[Order] int,
+    [Status] varchar(20) ,
+	[StartTime] datetime  ,
+	[EndTime] datetime  ,
+    [LoadTime] datetime default getutcdate(),
 );
 create table dbo.run_history
 (
@@ -250,7 +264,73 @@ insert into dbo.pending_deployments(ReleaseId, Asset_Name, Job_Name, [Order],[St
 (7, 'Asset59', 'MainJob', 2, @StartTimeNextH,@EndTimeNextH),
 (7, 'Asset59', 'PostJob', 3, @StartTimeNextH,@EndTimeNextH),
 (7, 'Asset60', 'PreJob', 1, @StartTimeNextH,@EndTimeNextH),
-(7, 'Asset60', 'MainJob', 2, @StartTimeNextH,@EndTimeNextH); -- no post job for Asset60 to test handling of missing jobs
+(7, 'Asset60', 'MainJob', 2, @StartTimeNextH,@EndTimeNextH), -- no post job for Asset60 to test handling of missing jobs
+(8, 'Asset61', 'PreJob', 1, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset61', 'Job1', 2, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset61', 'Job2', 3, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset61', 'Job3', 4, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset61', 'PostJob', 5, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset62', 'PreJob', 1, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset62', 'Job1', 2, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset62', 'Job2', 3, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset62', 'Job3', 4, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset62', 'PostJob', 5, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset63', 'PreJob', 1, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset63', 'Job1', 2, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset63', 'Job2', 3, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset63', 'Job3', 4, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset63', 'PostJob', 5, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset64', 'PreJob', 1, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset64', 'Job1', 2, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset64', 'Job2', 3, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset64', 'Job3', 4, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset64', 'PostJob', 5, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset65', 'PreJob', 1, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset65', 'Job1', 2, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset65', 'Job2', 3, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset65', 'Job3', 4, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset65', 'PostJob', 5, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset66', 'PreJob', 1, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset66', 'Job1', 2, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset66', 'Job2', 3, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset66', 'Job3', 4, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset66', 'PostJob', 5, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset67', 'PreJob', 1, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset67', 'Job1', 2, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset67', 'Job2', 3, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset67', 'Job3', 4, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset67', 'PostJob', 5, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset68', 'PreJob', 1, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset68', 'Job1', 2, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset68', 'Job2', 3, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset68', 'Job3', 4, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset68', 'PostJob', 5, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset69', 'PreJob', 1, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset69', 'Job1', 2, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset69', 'Job2', 3, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset69', 'Job3', 4, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset69', 'PostJob', 5, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset70', 'PreJob', 1, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset70', 'Job1', 2, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset70', 'Job2', 3, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset70', 'Job3', 4, @StartTimeNextH,@EndTimeNextH),
+(8, 'Asset70', 'PostJob', 5, @StartTimeNextH,@EndTimeNextH),
+(9, 'Asset71', 'PreJob', 1, @StartTimeNextH,@EndTimeNextH),
+(9, 'Asset71', 'MainJob', 2, @StartTimeNextH,@EndTimeNextH),
+(9, 'Asset71', 'PostJob', 3, @StartTimeNextH,@EndTimeNextH),
+(9, 'Asset72', 'PreJob', 1, @StartTimeNextH,@EndTimeNextH),
+(9, 'Asset72', 'MainJob', 2, @StartTimeNextH,@EndTimeNextH),
+(9, 'Asset72', 'PostJob', 3, @StartTimeNextH,@EndTimeNextH),
+(9, 'Asset73', 'PreJob', 1, @StartTimeNextH,@EndTimeNextH),
+(9, 'Asset73', 'MainJob', 2, @StartTimeNextH,@EndTimeNextH),
+(9, 'Asset73', 'PostJob', 3, @StartTimeNextH,@EndTimeNextH),
+(9, 'Asset74', 'PreJob', 1, @StartTimeNextH,@EndTimeNextH),
+(9, 'Asset74', 'MainJob', 2, @StartTimeNextH,@EndTimeNextH),
+(9, 'Asset74', 'PostJob', 3, @StartTimeNextH,@EndTimeNextH),
+(9, 'Asset75', 'PreJob', 1, @StartTimeNextH,@EndTimeNextH),
+(9, 'Asset75', 'MainJob', 2, @StartTimeNextH,@EndTimeNextH),
+(9, 'Asset75', 'PostJob', 3, @StartTimeNextH,@EndTimeNextH);
+
 
 BEGIN TRY
     BEGIN TRANSACTION;
