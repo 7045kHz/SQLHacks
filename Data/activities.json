@@ -1,0 +1,68 @@
+{
+  "activities": [
+    {
+      "activityName": "Connection",
+      "productVersion": "1.01",
+      "runType": "Must Run",
+      "activityDescription": "Connection Test.",
+      "duration": 5,
+      "runDependencies": {
+        "OnComplete": "Continue",
+        "OnFail": "Exit",
+        "OnTimeout": "Exit",
+        "OnInaccessible": "Exit"
+      }
+    },
+    {
+      "activityName": "Boks",
+      "productVersion": "12.2",
+      "runType": "Optional",
+      "activityDescription": "Boks Authentication.",
+      "duration": 45,
+      "runParameters": {
+        "domain": "production"
+      },
+      "runDependencies": {
+        "OnComplete": "Continue",
+        "OnFail": "Exit",
+        "OnTimeout": "Exit",
+        "OnInaccessible": "Continue"
+      }
+    },
+    {
+      "activityName": "RHEL OS Patching",
+      "productVersion": "2026-06-W1",
+      "activityDescription": "RHEL OS Patching June Week 1.",
+      "duration": 400,
+      "runType": "Optional",
+
+      "runParameters": {
+        "os": "redhat.9",
+        "logging": "extended"
+      },
+      "runDependencies": {
+        "OnComplete": "Continue",
+        "OnFail": "Exit",
+        "OnTimeout": "Exit",
+        "OnInaccessible": "Exit"
+      }
+    },
+    {
+      "activityName": "Bundle Builder",
+      "productVersion": "5.000A",
+      "activityDescription": "Bundle Builder.",
+      "duration": 60,
+      "runType": "Optional",
+      "runParameters": {
+        "os": "redhat.9",
+        "dotNetVersion": "10.0"
+      },
+      "runDependencies": {
+        "OnComplete": "Continue",
+        "OnFail": "Continue",
+        "OnTimeout": "Continue",
+        "OnInaccessible": "Continue"
+      }
+    }
+  ]
+}
